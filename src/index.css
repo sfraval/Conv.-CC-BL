@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: #FAF7F2;
+}
+
+body {
+  font-family: 'TT Norms Pro', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Empêcher le zoom sur focus iOS */
+input, select, textarea {
+  font-size: 16px;
+}
+
+@media print {
+  header { background: #1C2E5C !important; -webkit-print-color-adjust: exact; }
+  button { display: none !important; }
+}
