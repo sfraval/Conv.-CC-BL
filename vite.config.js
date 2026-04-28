@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // Pour GitHub Pages : remplacer 'lahune-conventions-pwa' par le nom de ton repo
 export default defineConfig({
-  base: '/lahune-conventions-pwa/',
+  base: '/Conv.-CC-BL/',
   plugins: [
     react(),
     VitePWA({
@@ -18,8 +18,8 @@ export default defineConfig({
         background_color: '#FAF7F2',
         display: 'standalone',
         orientation: 'portrait',
-        scope: '/lahune-conventions-pwa/',
-        start_url: '/lahune-conventions-pwa/',
+        scope: '/Conv.-CC-BL/',
+        start_url: '/Conv.-CC-BL/',
         icons: [
           {
             src: 'icon-192.png',
