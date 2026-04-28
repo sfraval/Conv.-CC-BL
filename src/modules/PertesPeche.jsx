@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Save, FileDown, Trash2, FolderOpen, Plus, X } from "lucide-react";
-import { Field, NumInput, TextInput, Section, StepRow, InfoBox, Btn, fmtEur, fmt, num, NAVY, CORAL, INK } from "../components/ui.jsx";
+import { Field, NumInput, TextInput, Section, StepRow, InfoBox, Btn, ExportModal, fmtEur, fmt, num, NAVY, CORAL, INK } from "../components/ui.jsx";
 import { saveDossier, loadByType, deleteDossier } from "../lib/storage.js";
-import { pdfPertesPeche, downloadPDF } from "../lib/pdf.js";
+import { docxPertesPeche, downloadDocx } from "../lib/docx.js";
 
 // Données par défaut basées sur l'exemple xlsx LA HUNE
 const DEFAULT_DATA = {
   title: "Cas pédagogique perte de pêche",
+  missionRef: "",
   navireSinistre: "Navire X",
   periode: "21/09 — 17/02",
   joursArret: "72",
@@ -54,6 +55,7 @@ export default function PertesPeche() {
   const [currentId, setCurrentId] = useState(null);
   const [showDossiers, setShowDossiers] = useState(false);
   const [dossiers, setDossiers] = useState([]);
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => { setDossiers(loadByType("pertes-peche")); }, [showDossiers]);
 
@@ -105,7 +107,7 @@ export default function PertesPeche() {
     setCurrentId(saved.id);
     alert(`Dossier sauvegardé : ${saved.id}`);
   };
-  const onLoad = (dos) => { setD(dos.data); setCurrentId(dos.id); setShowDossiers(false); };
+  const onLoad = (dos) => { setD({ ...DEFAULT_DATA, ...dos.data }); setCurrentId(dos.id); setShowDossiers(false); };
   const onNew = () => { setD(DEFAULT_DATA); setCurrentId(null); };
   const onDelete = (id) => {
     if (confirm("Supprimer ce dossier ?")) {
@@ -113,9 +115,11 @@ export default function PertesPeche() {
       if (currentId === id) onNew();
     }
   };
-  const onPDF = () => {
-    const doc = pdfPertesPeche(d, calc);
-    downloadPDF(doc, `LA_HUNE_PertesPeche_${(d.title || "dossier").replace(/[^a-z0-9]/gi, "_")}.pdf`);
+  const onExport = async ({ template, missionRef, includeConclusions }) => {
+    setD({ ...d, missionRef });
+    const doc = docxPertesPeche(d, calc, { template, missionRef, includeConclusions });
+    await downloadDocx(doc, `LA_HUNE_PertesPeche_${(d.title || "dossier").replace(/[^a-z0-9]/gi, "_")}.docx`);
+    setExportOpen(false);
   };
 
   // Helpers d'édition de tableaux
@@ -152,8 +156,16 @@ export default function PertesPeche() {
         <Btn onClick={onNew} icon={Plus} variant="ghost">Nouveau</Btn>
         <Btn onClick={() => setShowDossiers(!showDossiers)} icon={FolderOpen} variant="ghost">Dossiers ({dossiers.length})</Btn>
         <Btn onClick={onSave} icon={Save} variant="secondary">Sauvegarder</Btn>
-        <Btn onClick={onPDF} icon={FileDown}>Export PDF</Btn>
+        <Btn onClick={() => setExportOpen(true)} icon={FileDown}>Export Word</Btn>
       </div>
+
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        onExport={onExport}
+        defaultTemplate="module"
+        currentMissionRef={d.missionRef || ""}
+      />
 
       {showDossiers && (
         <Section title="Dossiers Pertes de pêche">
@@ -181,6 +193,9 @@ export default function PertesPeche() {
       <Section title="Identification">
         <Field label="Titre du dossier">
           <TextInput value={d.title} onChange={set("title")} />
+        </Field>
+        <Field label="N° de mission / référence dossier" hint="Repris en en-tête du rapport Word.">
+          <TextInput value={d.missionRef || ""} onChange={set("missionRef")} placeholder="ex. SIN-2026-042" />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Navire sinistré"><TextInput value={d.navireSinistre} onChange={set("navireSinistre")} /></Field>

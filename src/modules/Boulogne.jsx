@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Save, FileDown, Trash2, FolderOpen, Plus } from "lucide-react";
-import { Field, NumInput, TextInput, Select, Section, StepRow, Warn, InfoBox, Btn, fmtEur, num, NAVY, CORAL } from "../components/ui.jsx";
+import { Field, NumInput, TextInput, Select, Section, StepRow, Warn, InfoBox, Btn, ExportModal, fmtEur, num, NAVY, CORAL } from "../components/ui.jsx";
 import { saveDossier, loadByType, deleteDossier } from "../lib/storage.js";
-import { pdfBoulogne, downloadPDF } from "../lib/pdf.js";
+import { docxBoulogne, downloadDocx } from "../lib/docx.js";
 
 const M_BOULOGNE = [
   { coeff: 1, label: "Forces 0-2 — calme à mer belle" },
@@ -19,6 +19,7 @@ const M_BOULOGNE = [
 
 const DEFAULT_DATA = {
   title: "Cas pédagogique janvier 2020",
+  missionRef: "",
   W: "700", V: "18000", H: "72", A: "72", R: "0", p: "0.8",
   drReel: "8", m: "1.3", avaries: "6000", immo: "3000",
 };
@@ -28,6 +29,7 @@ export default function Boulogne({ kb }) {
   const [currentId, setCurrentId] = useState(null);
   const [showDossiers, setShowDossiers] = useState(false);
   const [dossiers, setDossiers] = useState([]);
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => { setDossiers(loadByType("boulogne")); }, [showDossiers]);
 
@@ -61,15 +63,12 @@ export default function Boulogne({ kb }) {
   };
 
   const onLoad = (dossier) => {
-    setD(dossier.data);
+    setD({ ...DEFAULT_DATA, ...dossier.data });
     setCurrentId(dossier.id);
     setShowDossiers(false);
   };
 
-  const onNew = () => {
-    setD(DEFAULT_DATA);
-    setCurrentId(null);
-  };
+  const onNew = () => { setD(DEFAULT_DATA); setCurrentId(null); };
 
   const onDelete = (id) => {
     if (confirm("Supprimer ce dossier ?")) {
@@ -79,22 +78,31 @@ export default function Boulogne({ kb }) {
     }
   };
 
-  const onPDF = () => {
-    const doc = pdfBoulogne({ ...d, kb }, calc);
-    downloadPDF(doc, `LA_HUNE_Boulogne_${(d.title || "dossier").replace(/[^a-z0-9]/gi, "_")}.pdf`);
+  const onExport = async ({ template, missionRef, includeConclusions }) => {
+    setD({ ...d, missionRef });
+    const doc = docxBoulogne({ ...d, kb }, calc, { template, missionRef, includeConclusions });
+    await downloadDocx(doc, `LA_HUNE_Boulogne_${(d.title || "dossier").replace(/[^a-z0-9]/gi, "_")}.docx`);
+    setExportOpen(false);
   };
 
   return (
     <div>
-      {/* Barre d'actions */}
       <div className="flex flex-wrap gap-2 mb-4">
         <Btn onClick={onNew} icon={Plus} variant="ghost">Nouveau</Btn>
         <Btn onClick={() => setShowDossiers(!showDossiers)} icon={FolderOpen} variant="ghost">
           Dossiers ({dossiers.length})
         </Btn>
         <Btn onClick={onSave} icon={Save} variant="secondary">Sauvegarder</Btn>
-        <Btn onClick={onPDF} icon={FileDown}>Export PDF</Btn>
+        <Btn onClick={() => setExportOpen(true)} icon={FileDown}>Export Word</Btn>
       </div>
+
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        onExport={onExport}
+        defaultTemplate="module"
+        currentMissionRef={d.missionRef || ""}
+      />
 
       {showDossiers && (
         <Section title="Dossiers Boulogne enregistrés">
@@ -122,6 +130,9 @@ export default function Boulogne({ kb }) {
       <Section title="Identification du dossier">
         <Field label="Titre du dossier" hint={currentId ? `ID actuel : ${currentId}` : "Nouveau dossier (non sauvegardé)"}>
           <TextInput value={d.title} onChange={set("title")} placeholder="ex. Sinistre Le Goëlec / 12-03-2026" />
+        </Field>
+        <Field label="N° de mission / référence dossier" hint="Repris en en-tête du rapport Word.">
+          <TextInput value={d.missionRef || ""} onChange={set("missionRef")} placeholder="ex. SIN-2026-042" />
         </Field>
       </Section>
 

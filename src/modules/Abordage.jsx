@@ -1,32 +1,63 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Save, FileDown, Trash2, FolderOpen, Plus, X } from "lucide-react";
-import { Field, NumInput, TextInput, Section, StepRow, InfoBox, Btn, fmtEur, num, NAVY, CORAL, INK, SAND } from "../components/ui.jsx";
+import { Field, NumInput, TextInput, Section, StepRow, InfoBox, Btn, ExportModal, fmtEur, num, NAVY, CORAL, INK, SAND } from "../components/ui.jsx";
 import { saveDossier, loadByType, deleteDossier } from "../lib/storage.js";
-import { pdfAbordage, downloadPDF } from "../lib/pdf.js";
+import { docxAbordage, downloadDocx } from "../lib/docx.js";
 
-// Catalogue des règles RIPAM (COLREG 1972) pertinentes pour l'abordage
+// Catalogue des règles RIPAM (COLREG 1972) — V3 dense et dissocié
+// Organisé en 5 sections : I (toute visibilité), II (en vue), III (visi réduite), C (feux et marques), D (signaux sonores), E (exemptions)
 const REGLES_RIPAM = [
-  { code: "R5", label: "Veille — Visuelle, auditive et par tous moyens disponibles", section: "I" },
-  { code: "R6", label: "Vitesse de sécurité", section: "I" },
-  { code: "R7", label: "Risque d'abordage — Évaluation appropriée", section: "I" },
-  { code: "R8", label: "Manœuvre pour éviter l'abordage", section: "I" },
-  { code: "R9", label: "Chenaux étroits", section: "I" },
+  // Section I — Conduite des navires dans toutes les conditions de visibilité
+  { code: "R5",  label: "Veille — Visuelle, auditive et par tous moyens disponibles", section: "I" },
+  { code: "R6",  label: "Vitesse de sécurité", section: "I" },
+  { code: "R7",  label: "Risque d'abordage — Évaluation appropriée", section: "I" },
+  { code: "R8",  label: "Manœuvre pour éviter l'abordage", section: "I" },
+  { code: "R9",  label: "Chenaux étroits", section: "I" },
   { code: "R10", label: "Dispositifs de séparation du trafic", section: "I" },
+
+  // Section II — Conduite des navires en vue les uns des autres
+  { code: "R11", label: "Champ d'application section II", section: "II" },
+  { code: "R12", label: "Navires à voile entre eux", section: "II" },
   { code: "R13", label: "Navire qui en rattrape un autre", section: "II" },
   { code: "R14", label: "Routes directement opposées", section: "II" },
   { code: "R15", label: "Routes qui se croisent", section: "II" },
   { code: "R16", label: "Manœuvre du navire non privilégié", section: "II" },
   { code: "R17", label: "Manœuvre du navire privilégié", section: "II" },
   { code: "R18", label: "Responsabilités réciproques entre navires", section: "II" },
+
+  // Section III — Conduite par visibilité réduite
   { code: "R19", label: "Conduite par visibilité réduite", section: "III" },
-  { code: "R20-31", label: "Feux et marques (Partie C)", section: "C" },
-  { code: "R32-37", label: "Signaux sonores et lumineux", section: "D" },
+
+  // Partie C — Feux et marques (R20 à R31)
+  { code: "R20", label: "Champ d'application des feux et marques", section: "C" },
+  { code: "R21", label: "Définitions des feux", section: "C" },
+  { code: "R22", label: "Visibilité des feux", section: "C" },
+  { code: "R23", label: "Navires à propulsion mécanique faisant route", section: "C" },
+  { code: "R24", label: "Navires en remorque ou poussant", section: "C" },
+  { code: "R25", label: "Navires à voile et navires à avirons", section: "C" },
+  { code: "R26", label: "Navires de pêche", section: "C" },
+  { code: "R27", label: "Navires non maîtres / capacité de manœuvre restreinte", section: "C" },
+  { code: "R28", label: "Navires handicapés par leur tirant d'eau", section: "C" },
+  { code: "R29", label: "Bateaux pilotes", section: "C" },
+  { code: "R30", label: "Navires au mouillage et navires échoués", section: "C" },
+  { code: "R31", label: "Hydravions", section: "C" },
+
+  // Partie D — Signaux sonores et lumineux (R32 à R37)
+  { code: "R32", label: "Définitions des signaux sonores", section: "D" },
+  { code: "R33", label: "Matériel de signalisation sonore", section: "D" },
+  { code: "R34", label: "Signaux de manœuvre et d'avertissement", section: "D" },
   { code: "R35", label: "Signaux sonores par visibilité réduite", section: "D" },
+  { code: "R36", label: "Signaux destinés à appeler l'attention", section: "D" },
+  { code: "R37", label: "Signaux de détresse", section: "D" },
+
+  // Partie E — Exemptions
+  { code: "R38", label: "Exemptions", section: "E" },
 ];
 
 // Barème par défaut (basé sur l'exemple LA HUNE) - modifiable par dossier
 const DEFAULT_DATA = {
   title: "Cas pédagogique abordage",
+  missionRef: "",
   navireA: "Navire A",
   navireB: "Navire B",
   dateLieu: "—",
@@ -44,6 +75,7 @@ export default function Abordage() {
   const [currentId, setCurrentId] = useState(null);
   const [showDossiers, setShowDossiers] = useState(false);
   const [dossiers, setDossiers] = useState([]);
+  const [exportOpen, setExportOpen] = useState(false);
   const [showCatalogue, setShowCatalogue] = useState(false);
 
   useEffect(() => { setDossiers(loadByType("abordage")); }, [showDossiers]);
@@ -72,7 +104,7 @@ export default function Abordage() {
     setCurrentId(saved.id);
     alert(`Dossier sauvegardé : ${saved.id}`);
   };
-  const onLoad = (dos) => { setD(dos.data); setCurrentId(dos.id); setShowDossiers(false); };
+  const onLoad = (dos) => { setD({ ...DEFAULT_DATA, ...dos.data }); setCurrentId(dos.id); setShowDossiers(false); };
   const onNew = () => { setD(DEFAULT_DATA); setCurrentId(null); };
   const onDelete = (id) => {
     if (confirm("Supprimer ce dossier ?")) {
@@ -80,9 +112,11 @@ export default function Abordage() {
       if (currentId === id) onNew();
     }
   };
-  const onPDF = () => {
-    const doc = pdfAbordage(d, calc);
-    downloadPDF(doc, `LA_HUNE_Abordage_${(d.title || "dossier").replace(/[^a-z0-9]/gi, "_")}.pdf`);
+  const onExport = async ({ template, missionRef, includeConclusions }) => {
+    setD({ ...d, missionRef });
+    const doc = docxAbordage(d, calc, { template, missionRef, includeConclusions });
+    await downloadDocx(doc, `LA_HUNE_Abordage_${(d.title || "dossier").replace(/[^a-z0-9]/gi, "_")}.docx`);
+    setExportOpen(false);
   };
 
   const updateRegle = (i, key, val) => {
@@ -105,8 +139,16 @@ export default function Abordage() {
         <Btn onClick={onNew} icon={Plus} variant="ghost">Nouveau</Btn>
         <Btn onClick={() => setShowDossiers(!showDossiers)} icon={FolderOpen} variant="ghost">Dossiers ({dossiers.length})</Btn>
         <Btn onClick={onSave} icon={Save} variant="secondary">Sauvegarder</Btn>
-        <Btn onClick={onPDF} icon={FileDown}>Export PDF</Btn>
+        <Btn onClick={() => setExportOpen(true)} icon={FileDown}>Export Word</Btn>
       </div>
+
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        onExport={onExport}
+        defaultTemplate="module"
+        currentMissionRef={d.missionRef || ""}
+      />
 
       {showDossiers && (
         <Section title="Dossiers Abordage">
@@ -133,6 +175,9 @@ export default function Abordage() {
 
       <Section title="Identification">
         <Field label="Titre du dossier"><TextInput value={d.title} onChange={set("title")} /></Field>
+        <Field label="N° de mission / référence dossier" hint="Repris en en-tête du rapport Word.">
+          <TextInput value={d.missionRef || ""} onChange={set("missionRef")} placeholder="ex. SIN-2026-042" />
+        </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Navire A"><TextInput value={d.navireA} onChange={set("navireA")} /></Field>
           <Field label="Navire B"><TextInput value={d.navireB} onChange={set("navireB")} /></Field>

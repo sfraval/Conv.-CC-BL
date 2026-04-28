@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Save, FileDown, Trash2, FolderOpen, Plus } from "lucide-react";
-import { Field, NumInput, TextInput, Select, Section, StepRow, Warn, InfoBox, Btn, fmtEur, num, NAVY, SAND, INK } from "../components/ui.jsx";
+import { Field, NumInput, TextInput, Select, Section, StepRow, Warn, InfoBox, Btn, ExportModal, fmtEur, num, NAVY, SAND, INK } from "../components/ui.jsx";
 import { saveDossier, loadByType, deleteDossier } from "../lib/storage.js";
-import { pdfConcarneau, downloadPDF } from "../lib/pdf.js";
+import { docxConcarneau, downloadDocx } from "../lib/docx.js";
 
 const E_TABLE = [
   { max: 34, coeff: 1.0, label: "< 35 CV" },
@@ -39,6 +39,7 @@ const A4_OPTS = [
 
 const DEFAULT_DATA = {
   title: "Cas pédagogique janvier 2020",
+  missionRef: "",
   W: "475", N1: "260", Nrem: "260", a4: "1",
   jours: "3", dureeMaree: "14", dRefuge: "180",
   portEtranger: false, maree4j: false,
@@ -52,6 +53,7 @@ export default function Concarneau({ kc }) {
   const [currentId, setCurrentId] = useState(null);
   const [showDossiers, setShowDossiers] = useState(false);
   const [dossiers, setDossiers] = useState([]);
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => { setDossiers(loadByType("concarneau")); }, [showDossiers]);
 
@@ -137,7 +139,7 @@ export default function Concarneau({ kc }) {
     setCurrentId(saved.id);
     alert(`Dossier sauvegardé : ${saved.id}`);
   };
-  const onLoad = (dos) => { setD(dos.data); setCurrentId(dos.id); setShowDossiers(false); };
+  const onLoad = (dos) => { setD({ ...DEFAULT_DATA, ...dos.data }); setCurrentId(dos.id); setShowDossiers(false); };
   const onNew = () => { setD(DEFAULT_DATA); setCurrentId(null); };
   const onDelete = (id) => {
     if (confirm("Supprimer ce dossier ?")) {
@@ -145,9 +147,11 @@ export default function Concarneau({ kc }) {
       if (currentId === id) onNew();
     }
   };
-  const onPDF = () => {
-    const doc = pdfConcarneau({ ...d, kc }, calc);
-    downloadPDF(doc, `LA_HUNE_Concarneau_${(d.title || "dossier").replace(/[^a-z0-9]/gi, "_")}.pdf`);
+  const onExport = async ({ template, missionRef, includeConclusions }) => {
+    setD({ ...d, missionRef });
+    const doc = docxConcarneau({ ...d, kc }, calc, { template, missionRef, includeConclusions });
+    await downloadDocx(doc, `LA_HUNE_Concarneau_${(d.title || "dossier").replace(/[^a-z0-9]/gi, "_")}.docx`);
+    setExportOpen(false);
   };
 
   return (
@@ -158,8 +162,16 @@ export default function Concarneau({ kc }) {
           Dossiers ({dossiers.length})
         </Btn>
         <Btn onClick={onSave} icon={Save} variant="secondary">Sauvegarder</Btn>
-        <Btn onClick={onPDF} icon={FileDown}>Export PDF</Btn>
+        <Btn onClick={() => setExportOpen(true)} icon={FileDown}>Export Word</Btn>
       </div>
+
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        onExport={onExport}
+        defaultTemplate="module"
+        currentMissionRef={d.missionRef || ""}
+      />
 
       {showDossiers && (
         <Section title="Dossiers Concarneau enregistrés">
@@ -187,6 +199,9 @@ export default function Concarneau({ kc }) {
       <Section title="Identification du dossier">
         <Field label="Titre du dossier" hint={currentId ? `ID actuel : ${currentId}` : "Nouveau dossier (non sauvegardé)"}>
           <TextInput value={d.title} onChange={set("title")} placeholder="ex. Sinistre St-Guénolé / 15-04-2026" />
+        </Field>
+        <Field label="N° de mission / référence dossier" hint="Repris en en-tête du rapport Word.">
+          <TextInput value={d.missionRef || ""} onChange={set("missionRef")} placeholder="ex. SIN-2026-042" />
         </Field>
       </Section>
 

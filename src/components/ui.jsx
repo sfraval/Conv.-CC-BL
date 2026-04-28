@@ -142,3 +142,92 @@ export const Btn = ({ onClick, children, variant = "primary", icon: Icon, size =
     </button>
   );
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Modale d'export Word — choix du template
+// ═══════════════════════════════════════════════════════════════════════════
+
+export function ExportModal({ open, onClose, onExport, defaultTemplate = "module", currentMissionRef = "" }) {
+  const [template, setTemplate] = React.useState(defaultTemplate);
+  const [missionRef, setMissionRef] = React.useState(currentMissionRef);
+  const [includeConclusions, setIncludeConclusions] = React.useState(true);
+
+  React.useEffect(() => {
+    if (open) {
+      setTemplate(defaultTemplate);
+      setMissionRef(currentMissionRef);
+    }
+  }, [open, defaultTemplate, currentMissionRef]);
+
+  if (!open) return null;
+
+  const TEMPLATES = [
+    { id: "module", label: "Rapport adapté au module", desc: "Mise en forme standard pour le module en cours" },
+    { id: "note", label: "Note technique générique", desc: "Format neutre, mise en page sobre" },
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(15, 27, 51, 0.7)" }}
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-lg max-w-md w-full p-5 shadow-xl"
+        style={{ borderTop: `4px solid ${CORAL}` }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-base font-bold mb-4 uppercase tracking-wider" style={{ color: NAVY }}>
+          Export Word — paramètres
+        </h3>
+
+        <Field label="Numéro de mission / référence dossier" hint="Affiché en en-tête du rapport. Optionnel.">
+          <TextInput value={missionRef} onChange={setMissionRef} placeholder="ex. SIN-2026-042" />
+        </Field>
+
+        <div className="text-xs font-semibold uppercase tracking-wider mb-2 mt-3" style={{ color: NAVY }}>
+          Modèle
+        </div>
+        <div className="space-y-2 mb-4">
+          {TEMPLATES.map((t) => (
+            <label
+              key={t.id}
+              className="flex items-start gap-2 p-2 rounded border cursor-pointer transition"
+              style={{
+                borderColor: template === t.id ? CORAL : "#D8DCE6",
+                background: template === t.id ? "#FFF8F5" : "white",
+              }}
+            >
+              <input
+                type="radio"
+                checked={template === t.id}
+                onChange={() => setTemplate(t.id)}
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <div className="text-sm font-semibold" style={{ color: NAVY }}>{t.label}</div>
+                <div className="text-xs" style={{ color: "#6B7280" }}>{t.desc}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+
+        <label className="flex items-center gap-2 mb-4 text-sm" style={{ color: INK }}>
+          <input
+            type="checkbox"
+            checked={includeConclusions}
+            onChange={(e) => setIncludeConclusions(e.target.checked)}
+          />
+          Inclure le bloc « Conclusions et observations » (lignes vides à compléter)
+        </label>
+
+        <div className="flex gap-2 justify-end pt-3 border-t" style={{ borderColor: "#EDE8DC" }}>
+          <Btn onClick={onClose} variant="ghost">Annuler</Btn>
+          <Btn onClick={() => onExport({ template, missionRef, includeConclusions })}>
+            Générer le rapport
+          </Btn>
+        </div>
+      </div>
+    </div>
+  );
+}

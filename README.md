@@ -1,8 +1,17 @@
-# LA HUNE — Boîte à outils expert pêche
+# LA HUNE — Boîte à outils expert pêche (V3)
 
-PWA d'aide à l'expertise maritime sur les sinistres pêche, regroupant quatre modules de calcul opérationnels.
+PWA d'aide à l'expertise maritime sur les sinistres pêche, regroupant quatre modules de calcul opérationnels avec génération de rapports Word style LA HUNE.
 
 > Cabinet d'expertise maritime indépendant · Landéda, Finistère
+
+## Nouveautés V3
+
+- **Export Word (.docx)** au lieu du PDF : encodage français parfait, format pro standard, modifiable avant envoi
+- **Sélecteur de template** à l'export : rapport adapté au module ou note technique générique
+- **Numéro de mission** en en-tête de chaque rapport (champ dédié dans chaque module)
+- **Bloc « Conclusions et observations »** ajouté en fin de document avec lignes prêtes à compléter
+- **Catalogue RIPAM enrichi** : 30 règles dissociées (R5 à R38) au lieu des 16 groupées de la V2
+- **Fix bug Étape 1 Pertes de pêche** : les CA totaux et jours par navire de référence sont maintenant correctement affichés dans le rapport
 
 ## Modules disponibles
 
@@ -19,11 +28,9 @@ Barème complet : indemnité de base A (déroutement, remorquage avec tranches 0
 - **Étape 4** : Perte retenue = CA brut perdu − charges déductibles
 
 ### 4. Abordage RIPAM / COLREG
-Partage de responsabilité par système de points sur les manquements aux règles du RIPAM. Catalogue intégré des règles 5 à 19, plus 35. Calcul automatique des soldes (qui doit combien à qui).
+Partage de responsabilité par système de points sur les manquements aux règles du RIPAM. Catalogue intégré V3 avec **30 règles dissociées** (R5 à R38, sections I, II, III, C, D, E). Calcul automatique des soldes (qui doit combien à qui).
 
 ## Cas pratiques de validation
-
-Les valeurs par défaut reproduisent les cas pédagogiques :
 
 | Module | Hypothèses clés | Résultat attendu |
 |---|---|---|
@@ -38,15 +45,17 @@ Les valeurs par défaut reproduisent les cas pédagogiques :
 - **Export JSON** : sauvegarde complète de tous les dossiers pour backup ou transfert vers un autre appareil
 - **Import JSON** : restauration d'un export antérieur
 
-## Export PDF style LA HUNE
+## Rapports Word style LA HUNE
 
-Chaque module génère un rapport PDF avec :
-- Bandeau navy + signature `LA HUNE.`
-- Tableaux structurés des hypothèses et du calcul détaillé
+Chaque module génère un rapport `.docx` avec :
+- En-tête navy + ligne coral + signature `LA HUNE.` + N° de mission
+- Sections numérotées (style note d'expertise, pas universitaire)
+- Tableaux propres encodés UTF-8 nativement
 - Encart navy/coral pour le résultat final
-- Pied de page LA HUNE
+- Bloc « Conclusions et observations » vide pour saisie de l'expert
+- Pied de page avec mention cabinet et numérotation pages
 
-Le PDF est conçu pour être joint au rapport d'expertise final.
+Le rapport est ouvrable et modifiable dans Word, Pages, LibreOffice ou Google Docs avant envoi au client (P&I Club, assureur, avocat, tribunal).
 
 ## Sources
 
@@ -56,11 +65,11 @@ Le PDF est conçu pour être joint au rapport d'expertise final.
 - RIPAM 1972 (Convention COLREG)
 - Cours DUEMTM, Module 9, séance du 12 mars 2026
 
-## Stack
+## Stack technique
 
 - React 18 + Vite 5
 - Tailwind CSS
-- jsPDF + jsPDF-autotable (génération PDF)
+- **docx** (Microsoft, génération .docx côté navigateur, UTF-8 natif)
 - vite-plugin-pwa (manifest + service worker offline)
 - lucide-react (icônes)
 
@@ -71,29 +80,9 @@ npm install
 npm run dev
 ```
 
-## Build et déploiement GitHub Pages
+## Déploiement
 
-```bash
-npm run build
-```
-
-Le workflow `.github/workflows/deploy.yml` déploie automatiquement sur Pages à chaque push sur `main`. Activer GitHub Pages dans Settings → Pages → Source : "GitHub Actions".
-
-URL finale : `https://<ton-user>.github.io/lahune-conventions-pwa/`
-
-## Installation sur iPhone
-
-1. Ouvrir l'URL dans Safari
-2. Bouton Partager → "Sur l'écran d'accueil"
-3. L'icône LA HUNE apparaît, l'app fonctionne offline
-
-## Charte graphique LA HUNE
-
-- Coral `#E85B3A`
-- Navy `#1C2E5C`
-- Sable `#FAF7F2`
-- Encre `#0F1B33`
-- Signature : `LA HUNE.` (avec point final)
+Le workflow `.github/workflows/deploy.yml` déploie automatiquement sur GitHub Pages à chaque push sur `main`.
 
 ## Avertissement
 
